@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Language of the Board — as the Silicon Hears It</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#150e21; --ground-2:#1d1430; --surface:#241836; --surface-2:#2c1f42;
+    --edge:#3a2a58; --ink:#ece1f7; --ink-soft:#bfaed6; --ink-mute:#8c7aa6;
+    --violet:#b98bff; --violet-deep:#7c4bd8;
+    --copper:#d99a5a; --copper-bright:#f4bd84; --silk:#efe7f7;
+    --rail-good:#5eead4; --rail-bad:#ff7aa8; --load:#d99a5a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(1100px 700px at 80% -10%, rgba(124,75,216,.24), transparent 60%),
+      radial-gradient(900px 600px at 5% 8%, rgba(120,60,180,.15), transparent 55%),
+      var(--ground);
+    color:var(--ink); font-family:"Space Grotesk",system-ui,sans-serif; line-height:1.6;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  /* faint right-angle copper trace texture — the board's own grain */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.05;
+    background-image:
+      linear-gradient(90deg, transparent 0 39px, var(--copper) 39px 40px, transparent 40px),
+      linear-gradient(0deg, transparent 0 39px, var(--copper) 39px 40px, transparent 40px);
+    background-size:40px 40px;
+    -webkit-mask-image:radial-gradient(circle at 70% 0%, #000, transparent 70%);
+            mask-image:radial-gradient(circle at 70% 0%, #000, transparent 70%);
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+
+  header{padding:80px 0 34px;}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.32em;
+    text-transform:uppercase;color:var(--copper);margin-bottom:24px;}
+  h1{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(40px,7vw,84px);
+    line-height:.98;letter-spacing:-.015em;}
+  h1 em{font-style:italic;color:var(--copper-bright);}
+  .thesis{margin-top:24px;max-width:54ch;font-size:18px;color:var(--ink-soft);}
+  .scope{margin-top:14px;max-width:60ch;font-size:14px;color:var(--ink-mute);
+    border-left:2px solid var(--copper);padding-left:14px;}
+  .scope b{color:var(--ink-soft);font-weight:500;}
+
+  /* designator alphabet */
+  .alpha{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 0;}
+  .ltr{display:flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+    font-size:12px;border:1px solid var(--edge);border-radius:8px;padding:5px 10px;color:var(--ink-soft);}
+  .ltr b{color:var(--copper-bright);font-weight:700;}
+
+  /* hero */
+  .hero{margin:34px 0 0;border:1px solid var(--edge);border-radius:18px;overflow:hidden;
+    background:linear-gradient(180deg,var(--surface),var(--ground-2));}
+  .hero .path{padding:20px 22px 4px;}
+  .hero .path svg{width:100%;height:auto;display:block;max-height:120px;}
+  .hero .scope-cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.06em;
+    color:var(--ink-mute);padding:0 22px 6px;}
+  .hero canvas{width:100%;height:200px;display:block;}
+  .hero .read{display:flex;gap:18px;flex-wrap:wrap;padding:10px 22px 18px;
+    font-family:"JetBrains Mono",monospace;font-size:12px;}
+  .hero .read span{display:flex;align-items:center;gap:7px;color:var(--ink-soft);}
+  .swl{width:18px;height:3px;border-radius:2px;}
+
+  section{padding:56px 0 4px;}
+  .sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:6px;flex-wrap:wrap;}
+  .sec-head h2{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(25px,3.6vw,36px);letter-spacing:-.01em;}
+  .sec-head .tag{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.06em;
+    padding:4px 11px;border-radius:999px;border:1px solid var(--edge);color:var(--ink-soft);}
+  .sec-sub{max-width:74ch;color:var(--ink-soft);margin:4px 0 26px;font-size:15.5px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+  .card{background:linear-gradient(180deg,var(--surface),var(--ground-2));
+    border:1px solid var(--edge);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;
+    transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease;}
+  .card:hover{transform:translateY(-3px);border-color:var(--copper);
+    box-shadow:0 18px 38px -22px rgba(217,154,90,.45);}
+  .glyph{display:flex;align-items:center;gap:16px;padding:16px 18px 8px;}
+  .glyph .sym{width:96px;height:58px;flex:none;}
+  .glyph .sym svg{width:100%;height:100%;}
+  .glyph .sym svg .s{fill:none;stroke:var(--copper);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .glyph .sym svg .f{fill:var(--copper);stroke:none;}
+  .desig{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:30px;color:var(--copper-bright);
+    line-height:1;}
+  .desig small{display:block;font-size:10px;font-weight:500;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-mute);margin-top:5px;}
+  .meta{padding:6px 18px 18px;}
+  .meta h3{font-family:"Fraunces",serif;font-weight:500;font-size:20px;margin-bottom:2px;}
+  .reads{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--copper-bright);
+    margin-bottom:9px;}
+  .reads::before{content:"reads as → ";color:var(--ink-mute);}
+  .meta p{font-size:13.5px;color:var(--ink-soft);line-height:1.55;}
+  .chip{display:inline-block;margin-top:11px;font-family:"JetBrains Mono",monospace;font-size:10.5px;
+    letter-spacing:.03em;padding:3px 8px;border-radius:6px;border:1px solid var(--edge);
+    color:var(--copper);background:rgba(0,0,0,.16);}
+
+  footer{margin-top:64px;padding:38px 0 70px;border-top:1px solid var(--edge);
+    color:var(--ink-mute);font-size:13.5px;max-width:80ch;}
+  footer b{color:var(--ink-soft);font-weight:500;}
+  footer em{color:var(--copper-bright);font-style:normal;}
+  .sig{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.2em;
+    text-transform:uppercase;margin-top:22px;color:var(--copper);}
+
+  @media (max-width:760px){header{padding:52px 0 24px;}.hero canvas{height:168px;}}
+  @media (prefers-reduced-motion:reduce){.card{transition:none;}html{scroll-behavior:auto;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Motherboard vernacular · field guide · III</div>
+    <h1>The language of the <em>board</em></h1>
+    <p class="thesis">A board doesn't write in words — it writes in two-letter designators and schematic glyphs printed in white on the laminate. Each one is a job. This is the dictionary for the part of that language spoken <em>to the silicon</em>: how the board feeds it, clocks it, protects it, and lets it speak.</p>
+    <p class="scope"><b>Scope.</b> Only the vocabulary that exists to serve the die — power delivery, the reference clock, gate protection, and the socket. The full board has many more words (audio, networking, connectors, lighting); those aren't talking to the substrate, so they sit this one out.</p>
+
+    <div class="alpha" id="alpha"></div>
+
+    <div class="hero">
+      <div class="path" id="heropath"></div>
+      <div class="scope-cap">the power path to the die — and what the capacitor at the node actually does to the rail</div>
+      <canvas id="wave"></canvas>
+      <div class="read">
+        <span><span class="swl" style="background:var(--load)"></span>core current demand</span>
+        <span><span class="swl" style="background:var(--rail-bad)"></span>rail without decoupling</span>
+        <span><span class="swl" style="background:var(--rail-good)"></span>rail with the cap</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="sections"></main>
+
+  <footer>
+    <p><b>On the dictionary.</b> Reference designators (C, R, L, D, Q, U, Y, FB…) follow the common IPC/IEEE convention, but vendors bend it — a board may call a ferrite bead <em>FB</em>, <em>L</em>, or <em>E</em>. Schematic glyphs are drawn in the widely-used ANSI style; the IEC world boxes its resistors and draws some symbols differently. The hero waveform is an exaggerated, schematic model — real droop is millivolts and the decoupling network spans many capacitor values, each covering a different band of frequency — but the shape of the lesson is true: the cap is a local reservoir that answers demand the distant regulator can't.</p>
+    <p style="margin-top:13px;"><b>The thread.</b> Every <em>U</em> on the board is a doped-silicon die like the ones in sheet one, switching through junctions like sheet two. This sheet is the neighbourhood that grew up around it to keep it fed and on time.</p>
+    <div class="sig">Field guide · v1.0 · companion to “The Doped Crystal” & “The Junction Zoo”</div>
+  </footer>
+
+</div>
+
+<script>
+const reduce = (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches) || false;
+
+/* ---------- schematic glyph library (viewBox 0 0 100 60) ---------- */
+const SYM = {
+  cap:`<path class="s" d="M6 30 H44 M56 30 H94 M44 13 V47 M56 13 V47"/>`,
+  capPol:`<path class="s" d="M6 30 H44 M56 30 H94 M44 13 V47"/>
+          <path class="s" d="M56 13 Q64 30 56 47"/>
+          <path class="s" d="M34 16 H42 M38 12 V20"/>`,
+  res:`<path class="s" d="M6 30 H24 L30 18 L40 42 L50 18 L60 42 L70 18 L76 30 H94"/>`,
+  ind:`<path class="s" d="M6 30 H24 a7 7 0 0 1 13 0 a7 7 0 0 1 13 0 a7 7 0 0 1 13 0 a7 7 0 0 1 13 0 H94"/>`,
+  bead:`<path class="s" d="M6 30 H94"/>
+        <ellipse class="s" cx="40" cy="30" rx="6" ry="11"/>
+        <ellipse class="s" cx="52" cy="30" rx="6" ry="11"/>
+        <ellipse class="s" cx="64" cy="30" rx="6" ry="11"/>`,
+  diode:`<path class="s" d="M6 30 H40 M60 30 H94 M60 16 V44"/>
+         <path class="f" d="M40 16 L40 44 L60 30 Z"/>`,
+  mosfet:`<path class="s" d="M6 30 H34"/>
+          <path class="s" d="M38 16 V44"/>
+          <path class="s" d="M44 16 V25 M44 27 V33 M44 35 V44"/>
+          <path class="s" d="M44 20 H64 V8 M44 40 H64 V52"/>
+          <path class="f" d="M52 36 L52 44 L46 40 Z"/>`,
+  ic:`<path class="s" d="M30 12 H70 V48 H30 Z M30 21 H22 M30 30 H22 M30 39 H22 M70 21 H78 M70 30 H78 M70 39 H78"/>
+      <circle class="f" cx="36" cy="18" r="2"/>`,
+  die:`<path class="s" d="M28 12 H72 V48 H28 Z M28 21 H20 M28 30 H20 M28 39 H20 M72 21 H80 M72 30 H80 M72 39 H80"/>
+       <path class="s" d="M44 24 H56 V36 H44 Z"/>`,
+  socket:`<path class="s" d="M20 12 H80 V48 H22 L20 46 Z"/>
+          <circle class="f" cx="32" cy="22" r="2"/><circle class="f" cx="44" cy="22" r="2"/><circle class="f" cx="56" cy="22" r="2"/><circle class="f" cx="68" cy="22" r="2"/>
+          <circle class="f" cx="32" cy="30" r="2"/><circle class="f" cx="44" cy="30" r="2"/><circle class="f" cx="56" cy="30" r="2"/><circle class="f" cx="68" cy="30" r="2"/>
+          <circle class="f" cx="32" cy="38" r="2"/><circle class="f" cx="44" cy="38" r="2"/><circle class="f" cx="56" cy="38" r="2"/><circle class="f" cx="68" cy="38" r="2"/>`,
+  xtal:`<path class="s" d="M6 30 H40 M60 30 H94 M40 16 V44 M60 16 V44 M44 20 H56 V40 H44 Z"/>`
+};
+function symSVG(key){ return `<svg viewBox="0 0 100 60">${SYM[key]}</svg>`; }
+
+/* ---------- designator alphabet ---------- */
+const ALPHA = [["C","capacitor"],["R","resistor"],["L","inductor"],["D","diode"],
+  ["Q","transistor"],["U","IC"],["Y","crystal"],["FB","ferrite bead"]];
+document.getElementById('alpha').innerHTML =
+  ALPHA.map(a=>`<span class="ltr"><b>${a[0]}</b>${a[1]}</span>`).join('');
+
+/* ---------- the words ---------- */
+const WORDS = [
+ {sec:"power", desig:"C", sub:"decoupling", sym:"cap", name:"Decoupling capacitor",
+  reads:"hold the rail steady", chip:"MLCC ceramic · 0.1–10 µF",
+  body:"Parked right at the chip's power pins. When millions of transistors switch in a nanosecond, the silicon's current demand jumps faster than the distant regulator can answer — so this little reservoir dumps charge on the spot and refills between bursts. A ring of them around a chip is the board saying: this silicon is fast and hungry."},
+
+ {sec:"power", desig:"C", sub:"bulk", sym:"capPol", name:"Bulk capacitor",
+  reads:"absorb the big, slow swings", chip:"polymer / electrolytic · 100s µF",
+  body:"The tall cans and black polymer blocks near the socket. They cover the larger, slower demand swings the tiny ceramics can't — a deeper reservoir behind the front line. Together the two hold the rail flat across a wide band of frequencies."},
+
+ {sec:"power", desig:"L", sub:"choke", sym:"ind", name:"Inductor / choke",
+  reads:"smooth the current", chip:"ferrite core",
+  body:"The boxed ferrite blocks lined up by the socket. Each is one phase of the buck converter stepping 12 V down to the ~1 V the core runs on — it stores energy in a magnetic field and lets the current out smoothly, so power arrives as a steady flow instead of jolts."},
+
+ {sec:"power", desig:"Q", sub:"power stage", sym:"mosfet", name:"Power-stage MOSFET",
+  reads:"switch the power", chip:"DrMOS",
+  body:"The small, hot chips beside the chokes. They chop the 12 V rail on and off a million times a second; the average of that chopping is the regulated core voltage. More of these — more phases — means more current the silicon can pull at once."},
+
+ {sec:"power", desig:"U", sub:"controller", sym:"ic", name:"VRM controller",
+  reads:"time the switches", chip:"PWM / VID controller",
+  body:"The brain of the power plant. It reads the exact voltage the CPU requests over a few digital pins (VID / SVID) and trims the MOSFET timing to hold the core there, load or no load. The silicon literally tells the board what voltage it wants, and this chip obeys."},
+
+ {sec:"power", desig:"FB", sub:"bead", sym:"bead", name:"Ferrite bead",
+  reads:"block the noise", chip:"ferrite",
+  body:"A component that resists only high frequencies. Dropped into a power line, it passes clean DC and turns switching hash into a tiny bit of heat — keeping the VRM's noise out of the silicon's supply and its sensitive analog pins."},
+
+ {sec:"clock", desig:"Y", sub:"resonator", sym:"xtal", name:"Crystal oscillator",
+  reads:"the heartbeat", chip:"quartz · ~25 MHz",
+  body:"A sliver of quartz that rings at one fixed frequency. The chip's internal PLLs lock to it and multiply it up into the gigahertz clock that paces every instruction. No crystal, no sense of time — the silicon needs an external metronome to count against."},
+
+ {sec:"signal", desig:"R", sub:"pull-up / term", sym:"res", name:"Resistor",
+  reads:"set the level, match the line", chip:"thick-film",
+  body:"The board's way of setting a default. A pull-up or pull-down ties an otherwise-floating input to a known 1 or 0 so the silicon never reads a coin-flip; in series it limits current, or matches a high-speed line's impedance so the signal edge doesn't ring and smear."},
+
+ {sec:"signal", desig:"D", sub:"TVS / ESD", sym:"diode", name:"Protection diode",
+  reads:"shield the gate", chip:"clamp / TVS",
+  body:"A one-way valve aimed at survival. Static off a fingertip or a spike on a port would punch straight through the silicon's nanometre-thin gate oxide, so a clamp diode shunts the surge to ground before it ever reaches the die."},
+
+ {sec:"core", desig:"U", sub:"the die", sym:"die", name:"The IC itself",
+  reads:"the silicon", chip:"doped Si die",
+  body:"The 'U' designators are the silicon packages — CPU, chipset, the firmware chip. Everything else on this page exists to feed, clock, protect, and talk to what's sealed inside them: a doped crystal exactly like the ones in the first sheet, switching through the junctions of the second."},
+
+ {sec:"core", desig:"—", sub:"socket", sym:"socket", name:"Socket / LGA pads",
+  reads:"the doorway to the die", chip:"gold-plated land grid",
+  body:"Hundreds or thousands of gold pads pressing on the package underside. Most carry power and ground straight down to the die; the rest are the high-speed lanes in and out. It's the literal doorway through which the whole board speaks to the substrate."}
+];
+
+const SECTIONS = [
+ {id:"power", title:"The power plant", tag:"VRM · POWER DELIVERY",
+  sub:"The largest part of the conversation is just keeping the die fed. A buck converter turns 12 V into the ~1 V the core needs, at scores of amps, holding it steady while the load thrashes."},
+ {id:"clock", title:"The heartbeat", tag:"CLOCK · REFERENCE",
+  sub:"One quartz reference the whole chip counts against. Everything fast inside the silicon is this slow tick, multiplied."},
+ {id:"signal", title:"Signal grammar", tag:"LEVELS · PROTECTION",
+  sub:"Small parts that decide what a wire means and keep the fragile gates alive — defaults, terminations, and clamps."},
+ {id:"core", title:"The silicon & its doorway", tag:"DIE · INTERFACE",
+  sub:"The thing everything else serves, and the grid of pads it speaks through."}
+];
+
+function build(){
+  const root=document.getElementById('sections');
+  SECTIONS.forEach(sec=>{
+    const s=document.createElement('section'); s.id=sec.id;
+    s.innerHTML=`<div class="sec-head"><h2>${sec.title}</h2><span class="tag">${sec.tag}</span></div>
+      <p class="sec-sub">${sec.sub}</p><div class="grid"></div>`;
+    const grid=s.querySelector('.grid');
+    WORDS.filter(w=>w.sec===sec.id).forEach(w=>{
+      const card=document.createElement('div'); card.className='card';
+      card.innerHTML=`
+        <div class="glyph">
+          <div class="sym">${symSVG(w.sym)}</div>
+          <div class="desig">${w.desig}<small>${w.sub}</small></div>
+        </div>
+        <div class="meta">
+          <h3>${w.name}</h3>
+          <div class="reads">${w.reads}</div>
+          <p>${w.body}</p>
+          <span class="chip">${w.chip}</span>
+        </div>`;
+      grid.appendChild(card);
+    });
+    root.appendChild(s);
+  });
+}
+build();
+
+/* ---------- hero power-path schematic ---------- */
+function heroPath(){
+  // 12V -> Q -> L -> node• -> C(to gnd) -> DIE, drawn with the glyphs
+  const svg=`
+  <svg viewBox="0 0 720 110" preserveAspectRatio="xMidYMid meet">
+    <g fill="none" stroke="var(--copper)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <text x="14" y="40" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="12" stroke="none">12 V</text>
+      <path d="M52 34 H92"/>
+      <!-- MOSFET (compact) -->
+      <path d="M104 22 V46"/><path d="M110 24 V31 M110 33 V39 M110 41 V46"/>
+      <path d="M110 27 H126 V14 M110 43 H126 V58"/>
+      <path d="M92 34 H104"/>
+      <text x="100" y="74" fill="var(--copper-bright)" font-family="JetBrains Mono, monospace" font-size="11" stroke="none">Q</text>
+      <path d="M126 34 H150"/>
+      <!-- choke -->
+      <path d="M150 34 a8 8 0 0 1 16 0 a8 8 0 0 1 16 0 a8 8 0 0 1 16 0"/>
+      <text x="166" y="74" fill="var(--copper-bright)" font-family="JetBrains Mono, monospace" font-size="11" stroke="none">L</text>
+      <path d="M198 34 H300"/>
+      <!-- node dot -->
+      <circle cx="300" cy="34" r="3.5" fill="var(--copper)" stroke="none"/>
+      <text x="276" y="22" fill="var(--ink-mute)" font-family="JetBrains Mono, monospace" font-size="10" stroke="none">node (core rail)</text>
+      <!-- cap down to ground -->
+      <path d="M300 34 V60 M286 60 H314 M286 70 H314 M300 70 V82 M292 86 H308 M295 90 H305 M298 93 H302"/>
+      <text x="318" y="70" fill="var(--copper-bright)" font-family="JetBrains Mono, monospace" font-size="12" stroke="none">C</text>
+      <!-- on to die -->
+      <path d="M300 34 H470"/>
+      <path d="M470 12 H600 V58 H470 Z"/>
+      <path d="M510 26 H560 V46 H510 Z"/>
+      <text x="612" y="40" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace" font-size="12" stroke="none">DIE</text>
+    </g>
+  </svg>`;
+  document.getElementById('heropath').innerHTML=svg;
+}
+heroPath();
+
+/* ---------- hero waveform: what the cap does ---------- */
+function sampleWave(ph){
+  const s1 = Math.sin(ph*2.0)>0 ? 1:0;
+  const s2 = Math.sin(ph*5.3)>0.3 ? 1:0;
+  const load = 0.18 + 0.82*(0.6*s1 + 0.4*s2);
+  const vNo  = 1.0 - 0.215*load;
+  const vCap = 1.0 - 0.028*load - 0.008*Math.sin(ph*22);
+  return {load, vNo, vCap};
+}
+
+const canvas=document.getElementById('wave');
+const ctx=canvas.getContext('2d');
+let cw=0, chh=0, dpr=1;
+function sizeCanvas(){
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  cw=canvas.clientWidth; chh=canvas.clientHeight;
+  canvas.width=cw*dpr; canvas.height=chh*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+const N=200;
+const buf=[];
+let phase=0;
+function seed(){ for(let i=0;i<N;i++){ buf.push(sampleWave(phase)); phase+=0.06; } }
+seed();
+
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+const COLgood=css('--rail-good')||'#5eead4', COLbad=css('--rail-bad')||'#ff7aa8',
+      COLload=css('--load')||'#d99a5a', COLgrid='rgba(185,139,255,.16)', COLmute='#8c7aa6';
+
+function draw(){
+  if(cw!==canvas.clientWidth || chh!==canvas.clientHeight) sizeCanvas();
+  ctx.clearRect(0,0,cw,chh);
+  const padL=46, padR=12, padT=14, padB=18;
+  const W=cw-padL-padR, H=chh-padT-padB;
+  // voltage band occupies top 62%, current band bottom 30%
+  const vH=H*0.60, cH=H*0.26, gap=H*0.14;
+  const vTop=padT, vBot=padT+vH;
+  const cTop=vBot+gap, cBot=cTop+cH;
+  // voltage axis 0.75..1.05 V
+  const vmin=0.75, vmax=1.05;
+  const vy=v=>vBot-((v-vmin)/(vmax-vmin))*vH;
+  const x=i=>padL+(i/(N-1))*W;
+
+  // nominal line
+  ctx.strokeStyle=COLgrid; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(padL,vy(1.0)); ctx.lineTo(padL+W,vy(1.0)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=COLmute; ctx.font='10px "JetBrains Mono", monospace'; ctx.textAlign='right';
+  ctx.fillText('1.00 V', padL-6, vy(1.0)+3);
+  ctx.fillText('0.80 V', padL-6, vy(0.80)+3);
+
+  // without-cap trace
+  ctx.lineWidth=2; ctx.lineJoin='round';
+  ctx.strokeStyle=COLbad; ctx.globalAlpha=.85;
+  ctx.beginPath();
+  buf.forEach((s,i)=>{ const X=x(i),Y=vy(s.vNo); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); });
+  ctx.stroke();
+  // with-cap trace
+  ctx.strokeStyle=COLgood; ctx.globalAlpha=1;
+  ctx.beginPath();
+  buf.forEach((s,i)=>{ const X=x(i),Y=vy(s.vCap); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); });
+  ctx.stroke();
+
+  // current demand (bottom)
+  const cy=v=>cBot-v*cH;
+  ctx.strokeStyle=COLgrid; ctx.beginPath(); ctx.moveTo(padL,cBot); ctx.lineTo(padL+W,cBot); ctx.stroke();
+  ctx.strokeStyle=COLload; ctx.globalAlpha=.9; ctx.lineWidth=1.6;
+  ctx.beginPath();
+  buf.forEach((s,i)=>{ const X=x(i),Y=cy(s.load); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); });
+  ctx.stroke();
+  ctx.globalAlpha=1;
+  ctx.textAlign='left'; ctx.fillStyle=COLmute;
+  ctx.fillText('I_core', padL+2, cTop-3);
+
+  // droop annotation on the bad trace at its lowest recent point
+  let lowI=0; for(let i=1;i<N;i++) if(buf[i].vNo<buf[lowI].vNo) lowI=i;
+  const bx=x(lowI);
+  ctx.strokeStyle='rgba(255,122,168,.5)'; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(bx,vy(buf[lowI].vNo)); ctx.lineTo(bx,vy(1.0)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=COLbad; ctx.textAlign='center';
+  ctx.fillText('droop', bx, vy(buf[lowI].vNo)+13);
+}
+
+if(reduce){ sizeCanvas(); draw(); }
+else{
+  let acc=0, last=performance.now();
+  function loop(now){
+    const dt=Math.min((now-last)/16.67,3); last=now;
+    acc+=dt;
+    // advance ~1.4 samples per frame for a calm scroll
+    while(acc>=0.7){ buf.push(sampleWave(phase)); phase+=0.06; buf.shift(); acc-=0.7; }
+    draw();
+    requestAnimationFrame(loop);
+  }
+  sizeCanvas();
+  requestAnimationFrame(loop);
+}
+window.addEventListener('resize', ()=>{ sizeCanvas(); if(reduce) draw(); });
+</script>
+</body>
+</html>
